@@ -3,13 +3,19 @@
 #include<string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #define MAX 300
 
+#define WAITING 1
+#define EXECUTING 2
+#define FINISHED 0
+
 #define CLIENT_SERVER "client_server"
 #define SERVER_CLIENT "server_client"
+
+
+int task_id=0;
 
 int main(int argc, char *argv[]){
     //cria fifo cliente-servidor
@@ -43,10 +49,23 @@ int main(int argc, char *argv[]){
         read(client_server,instruction, MAX);
 
         if(strncmp(instruction, "execute", 7) == 0){
+            char aux[MAX];
+
+
+            //função que transforme a instruction em uma string para por na lista tasks
+            //função que saque o tempo previsto da instruction para a expected_time
+
+
+            char notification[30];
+            sprintf(notification,"task id - %d\n ",task_id+1);
+            //envia o id da tarefa para o cliente
+            write(server_client,notification, strlen(notification));
+
+
 
         }
         else if(strncmp(instruction, "status", 6)==0){
-            
+
         }
 
     }
