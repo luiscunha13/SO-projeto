@@ -11,10 +11,10 @@ client: bin/client
 folders:
 	@mkdir -p src include obj bin tmp
 
-bin/orchestrator: obj/orchestrator.o
+bin/orchestrator: obj/orchestrator.o obj/task.o
 	$(CC) $(LDFLAGS) $^ -o $@
 
-bin/client: obj/client.o
+bin/client: obj/client.o obj/task.o
 	$(CC) $(LDFLAGS) $^ -o $@
 
 obj/%.o: src/%.c

@@ -1,24 +1,19 @@
 #include <fcntl.h>
 #include<stdlib.h>
 #include<string.h>
+#include"task.h"
 
-typedef struct Task{
-    pid_t pid;
-    char name[50];
-    int exp_time;
-    int real_time;
-    int status;
-}Task;
+Task* new_Task(){
+    Task* t = NULL;
+    return t;
+}
 
-typedef struct Task_List{
-    Task task;
-    struct Task_List *next;
-}Task_List;
-
-Task new_Task(pid_t pid, char* name, int time, int status){
+Task set_Task(pid_t pid, char* name, int time, char* type, int status){
     Task newtask;
     newtask.pid = pid;
     strcpy(newtask.name,name);
+    if(strcmp(type,"-u")==0) newtask.type = 0;
+    else if(strcmp(type,"-p")==0) newtask.type=1;
     newtask.exp_time = time;
     newtask.real_time = 0;
     newtask.status = status;
