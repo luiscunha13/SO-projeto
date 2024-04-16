@@ -21,7 +21,9 @@
     }Task_List;
 
 
-    void set_Task(Task t,pid_t pid, char* name, int time, char* type, int status);
+    void set_Task_Execute(Task t,pid_t pid, char* name, int time, char* type, int status);
+
+    void set_Task_Status(Task t);
 
     void set_realtime(Task t, int time);
 

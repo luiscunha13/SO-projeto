@@ -34,7 +34,7 @@ int main(int argc, char * argv[]){
         set_Task(t,getpid(),argv[4],atoi(argv[2]),argv[3],0);
     }
     else if(strcmp(argv[1],"status") == 0){
-        //decidir como enviar o status (provavelmente como task também)
+        set_Task_Status(t);
     }
     //else printf("comando inválido");
 

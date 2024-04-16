@@ -43,7 +43,12 @@ int main(int argc, char *argv[]){
     Task t;
 
     while(read(client_server_read,&t, sizeof(struct Task))>0){
+        if(t.type == EXECUTE){
 
+        }
+        else if(t.type == STATUS){
+
+        }
     }
 
 

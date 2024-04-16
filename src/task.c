@@ -4,16 +4,21 @@
 #include"task.h"
 
 
-void set_Task(Task t,pid_t pid, char* name, int time, char* type, int status){
+void set_Task_Execute(Task t,pid_t pid, char* name, int time, char* arg, int status){
 
     t.pid = pid;
     strcpy(t.name,name);
-    if(strcmp(type,"-u")==0) t.type = 0;
-    else if(strcmp(type,"-p")==0) t.type=1;
+    if(strcmp(arg,"-u")==0) t.arg = 0;
+    else if(strcmp(arg,"-p")==0) t.arg=1;
     t.exp_time = time;
     t.real_time = 0;
     t.status = status;
+    t.type = EXECUTE;
 
+}
+
+void set_Task_Status(Task t){
+    t.type = STATUS;
 }
 
 void set_realtime(Task t, int time){
