@@ -14,12 +14,13 @@ int main(int argc, char * argv[]){
 
     char comand[MAX];
 
-    if (argc < 2){
-        printf("não tem argumentos suficientes\n");
+    if (argc < 5){
+        printf("argumentos insuficientes\n");
         //não sei se é para fazer mais cenas
         return 0;
     }
 
+    //criar fifo server-cliente como pid
     char fifoc_name[30];
     sprintf(fifoc_name,SERVER_CLIENT"%d",getpid());
 
@@ -28,21 +29,25 @@ int main(int argc, char * argv[]){
         return -1;
     }
 
-    Task t = new
+    Task t;
 
     if(strcmp(argv[1],"execute") == 0){
-        Task t = new_Task(getpid(),argv[4],atoi(argv[2]),argv[3],0);
+        set_Task(t,getpid(),argv[4],atoi(argv[2]),argv[3],0);
     }
     else if(strcmp(argv[1],"status") == 0){
-        //strcpy(comand,"status");
+        //decidir como enviar o status (provavelmente como task também)
     }
     //else printf("comando inválido");
 
     int cs_fifo = open("client_server", O_WRONLY);
     if(cs_fifo<0) perror("erro abrir fifo client_server");
 
-    write(cs_fifo,t,sizeof(struct Task));
+    write(cs_fifo,&t,sizeof(struct Task));
     close(cs_fifo);
+
+    // ---------------------------------------------------------------
+    //até aqui deve estar tudo bem (só falta completar a cena do status)
+    // ---------------------------------------------------------------
 
     size_t b_read;
     int server_client = open("server_client",O_RDONLY);

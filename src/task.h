@@ -20,15 +20,12 @@
         struct Task_List *next;
     }Task_List;
 
-    Task* new_Task();
 
-    Task set_Task(pid_t pid, char* name, int time, char* type, int status);
+    void set_Task(Task t,pid_t pid, char* name, int time, char* type, int status);
 
     void set_realtime(Task t, int time);
 
     void update_status(Task t, int status);
-
-    Task parse_Task(char* instruction);
 
     Task_List* new_List();
 
