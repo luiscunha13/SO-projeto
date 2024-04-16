@@ -6,13 +6,18 @@
     #define EXECUTING 1
     #define FINISHED 2
 
+    #define EXECUTE 1
+    #define STATUS 2
+
     typedef struct Task{
         pid_t pid;
         char name[MAX];
-        int type;
+        int arg;
         int exp_time;
         int real_time;
         int status;
+        int type;
+
     }Task;
 
     typedef struct Task_List{

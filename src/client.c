@@ -31,7 +31,7 @@ int main(int argc, char * argv[]){
     Task t;
 
     if(strcmp(argv[1],"execute") == 0){
-        set_Task(t,getpid(),argv[4],atoi(argv[2]),argv[3],0);
+        set_Task_Execute(t,getpid(),argv[4],atoi(argv[2]),argv[3],0);
     }
     else if(strcmp(argv[1],"status") == 0){
         set_Task_Status(t);
