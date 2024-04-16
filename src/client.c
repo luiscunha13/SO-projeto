@@ -16,8 +16,7 @@ int main(int argc, char * argv[]){
 
     if (argc < 5){
         printf("argumentos insuficientes\n");
-        //não sei se é para fazer mais cenas
-        return 0;
+        _exit(1);
     }
 
     //criar fifo server-cliente como pid
@@ -40,7 +39,10 @@ int main(int argc, char * argv[]){
     //else printf("comando inválido");
 
     int cs_fifo = open("client_server", O_WRONLY);
-    if(cs_fifo<0) perror("erro abrir fifo client_server");
+    if(cs_fifo == -1){
+        perror("Dind't open client-server fifo");
+        return -1;
+    }
 
     write(cs_fifo,&t,sizeof(struct Task));
     close(cs_fifo);
@@ -51,8 +53,12 @@ int main(int argc, char * argv[]){
 
     size_t b_read;
     int server_client = open("server_client",O_RDONLY);
+    if(server_client == -1){
+        perror("Dind't open server-client fifo");
+        return -1;
+    }
     while((b_read = read(server_client,comand,MAX))>0){
-        write(...,comand,b_read); //perceber onde se deve escrever a resposta
+        write(1,comand,b_read); //perceber onde se deve escrever a resposta, meti 1 para não dar erro
     }
     close(server_client);
 
