@@ -38,6 +38,7 @@ int main(int argc, char * argv[]){
     }
     //else printf("comando inválido");
 
+    // Aqui ele vai enviar a task para o servidor
     int cs_fifo = open("client_server", O_WRONLY);
     if(cs_fifo == -1){
         perror("Dind't open client-server fifo");
@@ -51,6 +52,7 @@ int main(int argc, char * argv[]){
     //até aqui deve estar tudo bem (só falta completar a cena do status)
     // ---------------------------------------------------------------
 
+    //apos mandar, ele abre como modo de leitura para receber a resposta do sv
     size_t b_read;
     int server_client = open("server_client",O_RDONLY);
     if(server_client == -1){

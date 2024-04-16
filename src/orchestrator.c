@@ -44,10 +44,10 @@ int main(int argc, char *argv[]){
 
     while(read(client_server_read,&t, sizeof(struct Task))>0){
         if(t.type == EXECUTE){
-
+            execute_task(t);
         }
         else if(t.type == STATUS){
-
+            send_status();
         }
     }
 
