@@ -22,6 +22,8 @@ void set_Task_Status(Task t){
 }
 
 void execute_task(Task t){
+    //agora temos de meter o dup2 dentro dos casos  if t.arg == 0 de modo a 
+    // para ele depois meter o output direito?
     pid_t pid = fork();
 
     if(pid == -1){
@@ -46,7 +48,48 @@ void execute_task(Task t){
             execlp(t.name, t.name, NULL);
         }
         else{
-            //parte para executar o pipeline de programas
+            
+            char* token;
+            char* args[30];
+            int i = 0;
+            char *command, *tofree;
+            int status, ret;
+
+            command = tofree = strdup(t.name);
+
+            
+            while ((token   = strsep(&command, "|"))!= NULL && i < 30){
+                args[i++] = token;
+            }
+            args[i] = NULL;
+
+            pid_t pipe_pid = fork();
+            switch(pipe_pid){
+                case -1:
+                    perror("Erro ao criar o processo pid para o pipeline");
+                    ret = -1;
+                    break;
+                
+                case 0: 
+                    execvp(args[0],args);
+                    perror("Erro ao executar o comando no pipeline");
+                    _exit(EXIT_FAILURE);
+                    break;
+
+                default : 
+                wait(&status);
+                if(WIFEXITED(status)){
+                    ret = WEXITSTATUS(status);
+                }
+                else{
+                    perror("filho não terminou\n");
+                    ret = -1;
+                }
+                free(tofree);
+
+            }
+            _exit(ret);
+    
         }
     }
     else{
@@ -66,8 +109,12 @@ void execute_task(Task t){
 }
 
 
-void send_status(){
-
+void send_status(int client_fifo, int status){
+    size_t b_written = write(client_fifo, &status,sizeof(status));
+    if(b_written == -1){
+        perror("Erro ao escrever status no FIFO do cliente");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void set_realtime(Task t, int time){

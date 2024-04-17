@@ -47,7 +47,7 @@ int main(int argc, char *argv[]){
             execute_task(t);
         }
         else if(t.type == STATUS){
-            send_status();
+            send_status(client_server_write, t.status);
         }
     }
 
