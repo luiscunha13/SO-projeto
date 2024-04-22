@@ -49,48 +49,6 @@ void argsToList(Task t, char *list[]){
 }
 
 
-int execute_task_ONE(Task t, char *list_args[]){
-    //agora temos de meter o dup2 dentro dos casos  if t.arg == 0 de modo a 
-    // para ele depois meter o output direito?
-    pid_t pid = fork();
-
-    switch(pid){
-        case -1:
-            perror("Erro ao criar processo filho");
-            return -1;
-    }
-    if(pid == -1){
-
-    }
-    else if (pid == 0) {
-        char outfilename[40];
-        char errorsfilename[40];
-        sprintf(outfilename, "%d_output.txt", t.pid);
-        sprintf(outfilename, "%d_errors.txt", t.pid);
-
-        int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-        if (fdout == -1) {
-            perror("Didn't open output file");
-            return -1;
-        }
-        int fderr = open(errorsfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-        if (fderr == -1) {
-            perror("Didn't open errors file");
-            return -1;
-        }
-
-        dup2(fdout, 1);
-        //dup2(fdout, 0);
-        close(fdout);
-
-        if (t.arg == 0) {
-            execlp(t.name, t.name, NULL);
-        }
-    }
-
-    
-}
-
 /*else{
 
             char* token;
