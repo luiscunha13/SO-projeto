@@ -1,41 +1,53 @@
 #ifndef SO_PROJETO_TASK_H
 #define SO_PROJETO_TASK_H
 
-    #define MAX 300
-    #define WAITING 0
-    #define EXECUTING 1
-    #define FINISHED 2
+#define MAX 300
 
-    #define EXECUTE 1
-    #define STATUS 2
+typedef enum TaskType {
+    EXECUTE,
+    STATUS
+} TaskType;
 
-    typedef struct Task{
-        pid_t pid;
-        char name[MAX];
-        int arg;
-        int exp_time;
-        int real_time;
-        int status;
-        int type;
+typedef enum TaskStatus{
+    WAITING,
+    EXECUTING,
+    FINISHED
+} TaskStatus;
 
-    }Task;
-
-    typedef struct Task_List{
-        Task task;
-        struct Task_List *next;
-    }Task_List;
+typedef enum TaskArg{
+    ONE,
+    MULTIPLE
+} TaskArg;
 
 
-    void set_Task_Execute(Task t,pid_t pid, char* name, int time, char* type, int status);
+typedef struct Task{
+    TaskType type; //tipo de task: Execute ou Status
+    pid_t pid; // Pid do fifo do cliente que manda o pedido
+    char command[MAX]; // comando a ser executado
+    int arg; // argumento: -u ou -p
+    int exp_time; //tempo esperado em ms (dado pelo utilizador)
+    int real_time; //tempo que realmente demorou a ser executado
+    TaskStatus status; //estado da task: Waiting, Executing, Finished
 
-    void set_Task_Status(Task t);
+}Task;
 
-    void set_realtime(Task t, int time);
+typedef struct Task_List{
+    Task task;
+    struct Task_List *next;
+}*Task_List;
 
-    void update_status(Task t, int status);
+void parse_Task_Execute(Task t,pid_t pid, char *argv[]);
 
-    Task_List* new_List();
+void parse_Task_Status(Task t, pid_t pid);
 
-    void add_Task(Task_List* list, Task task);
+void argsToList(Task t, char *list[]);
+
+void set_realtime(Task t, int time);
+
+void update_status(Task t, int status);
+
+Task_List* new_List();
+
+void add_Task(Task_List* list, Task task);
 
 #endif

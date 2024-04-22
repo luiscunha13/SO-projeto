@@ -12,12 +12,17 @@
 
 int main(int argc, char * argv[]){
 
-    char comand[MAX];
+    char command[MAX];
+    Task t;
 
-    if (argc < 5){
-        printf("argumentos insuficientes\n");
-        _exit(1);
+
+    if(argc == 5 && strcmp(argv[1],"execute")==0) parse_Task_Execute(t, getpid(),argv);
+    else if (argc == 2 && strcmp(argv[1],"status")==0) parse_Task_Status(t, getpid());
+    else{
+        printf("argumentos inválidos");
+        return -1;
     }
+
 
     //criar fifo server-cliente como pid
     char fifoc_name[30];
@@ -27,16 +32,6 @@ int main(int argc, char * argv[]){
         perror("mkfifo server-client");
         return -1;
     }
-
-    Task t;
-
-    if(strcmp(argv[1],"execute") == 0){
-        set_Task_Execute(t,getpid(),argv[4],atoi(argv[2]),argv[3],0);
-    }
-    else if(strcmp(argv[1],"status") == 0){
-        set_Task_Status(t);
-    }
-    //else printf("comando inválido");
 
     // Aqui ele vai enviar a task para o servidor
     int cs_fifo = open("client_server", O_WRONLY);
@@ -59,8 +54,10 @@ int main(int argc, char * argv[]){
         perror("Dind't open server-client fifo");
         return -1;
     }
-    while((b_read = read(server_client,comand,MAX))>0){
-        write(1,comand,b_read); //perceber onde se deve escrever a resposta, meti 1 para não dar erro
+
+
+    while((b_read = read(server_client,command,MAX))>0){
+        write(1,command,b_read); //perceber onde se deve escrever a resposta, meti 1 para não dar erro
     }
     close(server_client);
 

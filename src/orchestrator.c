@@ -17,6 +17,7 @@
 int task_id=0;
 
 int main(int argc, char *argv[]){
+
     //cria fifo cliente-servidor
     if(mkfifo(CLIENT_SERVER, 0666) == -1){
         perror("mkfifo client-server");
@@ -31,7 +32,6 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    Task_List *list = new_List();
 
     //abre o fifo client-server para leitura
     int client_server_read = open(CLIENT_SERVER, O_RDONLY);
@@ -41,9 +41,23 @@ int main(int argc, char *argv[]){
     }
 
     Task t;
+    Task_List list;
+    char *list_args[MAX];
+    char *copy = strdup(t.command);
 
     while(read(client_server_read,&t, sizeof(struct Task))>0){
         if(t.type == EXECUTE){
+            if(t.arg==ONE){ // -u
+                argsToList(t,list_args);
+
+                add_Task(&list,t);
+
+
+
+            }
+            else if(t.arg==MULTIPLE){ // -p
+
+            }
             execute_task(t);
         }
         else if(t.type == STATUS){
@@ -55,7 +69,7 @@ int main(int argc, char *argv[]){
 
 
 
-
+    return 0;
 
 
 }
