@@ -16,7 +16,7 @@ typedef enum TaskStatus{
 
 typedef enum TaskArg{
     ONE,
-    MULTIPLE
+    PIPELINE
 } TaskArg;
 
 
@@ -28,6 +28,7 @@ typedef struct Task{
     int exp_time; //tempo esperado em ms (dado pelo utilizador)
     int real_time; //tempo que realmente demorou a ser executado
     TaskStatus status; //estado da task: Waiting, Executing, Finished
+    int id;
 
 }Task;
 
@@ -40,9 +41,13 @@ void parse_Task_Execute(Task t,pid_t pid, char *argv[]);
 
 void parse_Task_Status(Task t, pid_t pid);
 
-void argsToList(Task t, char *list[]);
+void argsToList(char *command, char *list[]);
+
+int commandsToList(Task t, char *list[]);
 
 void set_realtime(Task t, int time);
+
+void set_id(Task t, int id);
 
 void update_status(Task t, int status);
 

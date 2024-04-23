@@ -8,18 +8,18 @@
 
 #define MAX 300
 
+#define CLIENT_SERVER "client_server"
 #define SERVER_CLIENT "server_client_"
 
 int main(int argc, char * argv[]){
 
-    char command[MAX];
     Task t;
 
 
     if(argc == 5 && strcmp(argv[1],"execute")==0) parse_Task_Execute(t, getpid(),argv);
     else if (argc == 2 && strcmp(argv[1],"status")==0) parse_Task_Status(t, getpid());
     else{
-        printf("argumentos inválidos");
+        printf("CLIENT: argumentos inválidos");
         return -1;
     }
 
@@ -29,37 +29,35 @@ int main(int argc, char * argv[]){
     sprintf(fifoc_name,SERVER_CLIENT"%d",getpid());
 
     if(mkfifo(fifoc_name, 0666) == -1){
-        perror("mkfifo server-client");
+        perror("CLIENT: mkfifo server-client");
         return -1;
     }
 
     // Aqui ele vai enviar a task para o servidor
-    int cs_fifo = open("client_server", O_WRONLY);
+    int cs_fifo = open(CLIENT_SERVER, O_WRONLY);
     if(cs_fifo == -1){
-        perror("Dind't open client-server fifo");
+        perror("CLIENT: Dind't open client-server fifo to write");
         return -1;
     }
 
     write(cs_fifo,&t,sizeof(struct Task));
     close(cs_fifo);
 
-    // ---------------------------------------------------------------
-    //até aqui deve estar tudo bem (só falta completar a cena do status)
-    // ---------------------------------------------------------------
 
-    //apos mandar, ele abre como modo de leitura para receber a resposta do sv
-    size_t b_read;
-    int server_client = open("server_client",O_RDONLY);
+    int server_client = open(fifoc_name,O_RDONLY);
     if(server_client == -1){
-        perror("Dind't open server-client fifo");
+        perror("CLIENT: Dind't open server-client fifo to read");
         return -1;
     }
 
+    int id;
+    read(server_client,&id,sizeof (int));
 
-    while((b_read = read(server_client,command,MAX))>0){
-        write(1,command,b_read); //perceber onde se deve escrever a resposta, meti 1 para não dar erro
-    }
+    printf("Id da tarefa: %d\n",id);
+
     close(server_client);
+
+    unlink(fifoc_name);
 
     return 0;
 
