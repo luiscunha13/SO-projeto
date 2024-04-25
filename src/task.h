@@ -26,7 +26,7 @@ typedef struct Task{
     char command[MAX]; // comando a ser executado
     int arg; // argumento: -u ou -p
     int exp_time; //tempo esperado em ms (dado pelo utilizador)
-    int real_time; //tempo que realmente demorou a ser executado
+    long real_time; //tempo que realmente demorou a ser executado
     TaskStatus status; //estado da task: Waiting, Executing, Finished
     int id;
 
@@ -45,14 +45,16 @@ void argsToList(char *command, char *list[]);
 
 int commandsToList(Task t, char *list[]);
 
-void set_realtime(Task t, int time);
+void set_realtime(Task t, long time);
 
 void set_id(Task t, int id);
 
-void update_status(Task t, int status);
+void status_executing(Task t);
 
-Task_List* new_List();
+void status_finished(Task t);
 
 void add_Task(Task_List* list, Task task);
+
+Task get_task(Task_List t);
 
 #endif

@@ -6,18 +6,20 @@
 #include<unistd.h>
 #include"task.h"
 #include<sys/wait.h>
+#include<sys/time.h>
 
 #define MAX 300
 
 #define CLIENT_SERVER "client_server"
 #define SERVER_CLIENT "server_client_"
+#define OUTPUTS_FILE "outputs"
 
 int task_id=1;
 //para o -u
-int execute_task_ONE(Task t, char *list_args[]){ //fica a faltar a parte de meter o tempo a contar
+int execute_task_ONE(Task t, char *list_args[], struct timeval before){ //fica a faltar a parte de meter o tempo a contar
     char outfilename[40];
     char errorsfilename[40];
-
+    struct timeval after;
     pid_t pid = fork();
 
     int status;
@@ -25,10 +27,9 @@ int execute_task_ONE(Task t, char *list_args[]){ //fica a faltar a parte de mete
         case -1:
             perror("Erro ao criar processo filho");
             return -1;
-            break;
         case 0:
-            sprintf(outfilename, "%d_output.txt", t.pid);
-            sprintf(errorsfilename, "%d_errors.txt", t.pid);
+            sprintf(outfilename, "%d_output.txt", t.id);
+            sprintf(errorsfilename, "%d_errors.txt", t.id);
 
             int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
             if (fdout == -1) {
@@ -47,7 +48,32 @@ int execute_task_ONE(Task t, char *list_args[]){ //fica a faltar a parte de mete
             close(fderr);
 
             execvp(list_args[0], list_args);
+            gettimeofday(&after,NULL);
 
+            close(fdout);
+
+            long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
+
+            set_realtime(t,ms);
+            status_finished(t);
+
+            int fd = open(OUTPUTS_FILE,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            if (fd == -1) {
+                perror("Didn't open outputs file");
+                return -1;
+            }
+            char lines[50];
+            sprintf(lines,"Task %d \n Time spent: %ld ms\n", t.id,t.real_time);
+
+            ssize_t bytes_written = write(fd,lines,strlen(lines));
+            if (bytes_written == -1) {
+                perror("Error writing to outputs file");
+                close(fd);
+                close(fderr);
+                return -1;
+            }
+
+            close(fderr);
             _exit(0);
         default :
             wait(&status);
@@ -74,7 +100,25 @@ int exec_command(char* command){
     return exec_ret;
 }
 
-int execute_task_PIPELINE(char *tasks[], int num_tasks){
+int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval before){
+    char outfilename[40];
+    char errorsfilename[40];
+    struct timeval after;
+
+    sprintf(outfilename, "%d_output.txt", t.id);
+    sprintf(errorsfilename, "%d_errors.txt", t.id);
+
+    int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fdout == -1) {
+        perror("Didn't open output file");
+        return -1;
+    }
+
+    int fderr = open(errorsfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fderr == -1) {
+        perror("Didn't open errors file");
+        return -1;
+    }
 
     int pipes[num_tasks -1][2];
     for(int i = 0; i< num_tasks; i++){
@@ -82,7 +126,7 @@ int execute_task_PIPELINE(char *tasks[], int num_tasks){
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                        perror("Erro ao criar pid filho");
+                        perror("PIPELINE: Erro ao criar processo filho");
                         break;
 
                 case 0 : 
@@ -97,7 +141,7 @@ int execute_task_PIPELINE(char *tasks[], int num_tasks){
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                        perror("Erro ao criar pid filho");
+                        perror("PIPELINE: Erro ao criar processo filho");
                         break;
                 case 0 :
                         close(pipes[i][0]);
@@ -124,13 +168,68 @@ int execute_task_PIPELINE(char *tasks[], int num_tasks){
         }
     }
     for(int i = 0; i<num_tasks;i++){
-			wait(NULL);
-		}
+        wait(NULL);
+    }
+
+    gettimeofday(&after,NULL);
+
+    close(fdout);
+
+    long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
+
+    set_realtime(t,ms);
+    status_finished(t);
+
+    int fd = open(OUTPUTS_FILE,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd == -1) {
+        perror("Didn't open outputs file");
+        return -1;
+    }
+
+    char lines[50];
+    sprintf(lines,"Task %d \n Time spent: %ld ms\n", t.id,t.real_time);
+
+    ssize_t bytes_written = write(fd,lines,strlen(lines));
+    if (bytes_written == -1) {
+        perror("Error writing to outputs file");
+        close(fd);
+        close(fderr);
+        return -1;
+    }
+
+    close(fderr);
+
     return 0;
 }
 
-int status(Task_List list){
+int status(Task_List list_tasks, Task_List finished_tasks){
+    int fd = open(OUTPUTS_FILE,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd == -1) {
+        perror("Didn't open outputs file");
+        return -1;
+    }
 
+    Task_List* current = list_tasks;
+    char line[MAX];
+    sprintf(line,"WAITING/EXECUTING TASKS\n");
+    write(fd,line,sizeof(line));
+
+    while(current != NULL){
+        Task t = get_task(current);
+        sprintf(line,"Task %d\nCommand: %s\n", t.id,t.command);
+    }
+
+    current = finished_tasks;
+    sprintf(line,"FINISHED TASKS\n");
+    write(fd,line,sizeof(line));
+
+    while(current != NULL){
+        Task t = get_task(current);
+        sprintf(line,"Task %d\nCommand: %s\nTime used: %d\n", t.id,t.command,t.real_time);
+    }
+    close(fd);
+
+    return 0;
 }
 
 int main(int argc, char *argv[]){
@@ -157,17 +256,26 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
+    char outputsfile[10];
+    sprintf(outputsfile, "%s.txt",OUTPUTS_FILE);
+
+
     Task t;
     Task_List list_tasks;
+    Task_List finished_tasks;
     char *list[MAX];
     char *copy = strdup(t.command);
+    struct timeval before;
 
     while(read(client_server_read,&t, sizeof(struct Task))>0){
         if(t.type == EXECUTE){
+            gettimeofday(&before,NULL);
             int aux = task_id;
             set_id(t,task_id);
             task_id++;
+            status_executing(t);
             add_Task(&list_tasks,t);
+
             //Envio do id da tarefa para o servidor
             char fifoc_name[30];
             sprintf(fifoc_name,SERVER_CLIENT"%d",t.pid);
@@ -182,15 +290,15 @@ int main(int argc, char *argv[]){
 
             if(t.arg==ONE){ // -u
                 argsToList(t.command,list);       //tem que se mudar o status da task
-                execute_task_ONE(t, list);
+                execute_task_ONE(t, list, before);
             }
             else if(t.arg==PIPELINE){ // -p
                 int n = commandsToList(t,list);
-                execute_task_PIPELINE(list,n);
+                execute_task_PIPELINE(t,list,n,before);
             }
         }
         else if(t.type == STATUS){
-
+            status(list_tasks,finished_tasks);
         }
     }
 

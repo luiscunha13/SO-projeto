@@ -73,7 +73,7 @@ void send_status(int client_fifo, int status){
 }
 
 
-void set_realtime(Task t, int time){
+void set_realtime(Task t, long time){
     t.real_time = time;
 }
 
@@ -81,14 +81,12 @@ void set_id(Task t, int id){
     t.id = id;
 }
 
-void update_status(Task t, int status){
-    t.status = status;
+void status_executing(Task t){
+    t.status = EXECUTING;
 }
 
-
-Task_List* new_List(){
-    Task_List* list = NULL;
-    return list;
+void status_finished(Task t){
+    t.status = FINISHED;
 }
 
 void add_Task(Task_List* list, Task task){ //mete a task à cabeça da lista
@@ -97,5 +95,9 @@ void add_Task(Task_List* list, Task task){ //mete a task à cabeça da lista
     new->task = task;
     new->next = (*list);
     (*list) = new;
+}
+
+Task get_task(Task_List t){
+    return t->task;
 }
 
