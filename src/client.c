@@ -19,7 +19,7 @@ int main(int argc, char * argv[]){
     if(argc == 5 && strcmp(argv[1],"execute")==0) parse_Task_Execute(t, getpid(),argv);
     else if (argc == 2 && strcmp(argv[1],"status")==0) parse_Task_Status(t, getpid());
     else{
-        printf("CLIENT: argumentos inválidos");
+        printf("CLIENT: invalid arguments");
         return -1;
     }
 
@@ -53,7 +53,7 @@ int main(int argc, char * argv[]){
     int id;
     read(server_client,&id,sizeof (int));
 
-    printf("Id da tarefa: %d\n",id);
+    printf("Task id: %d\n",id);
 
     close(server_client);
 

@@ -35,7 +35,7 @@ typedef struct Task{
 typedef struct Task_List{
     Task task;
     struct Task_List *next;
-}*Task_List;
+}Task_List;
 
 void parse_Task_Execute(Task t,pid_t pid, char *argv[]);
 
@@ -53,8 +53,12 @@ void status_executing(Task t);
 
 void status_finished(Task t);
 
-void add_Task(Task_List* list, Task task);
+void add_Task_fcfs(Task_List** list, Task task);
 
-Task get_task(Task_List t);
+void add_task_sjf(Task_List** list, Task task);
+
+void remove_head_Task(Task_List** list);
+
+Task get_task(Task_List* t);
 
 #endif

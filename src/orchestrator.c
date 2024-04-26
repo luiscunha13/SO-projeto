@@ -12,13 +12,12 @@
 
 #define CLIENT_SERVER "client_server"
 #define SERVER_CLIENT "server_client_"
-#define OUTPUTS_FILE "outputs"
 
 int task_id=1;
 //para o -u
-int execute_task_ONE(Task t, char *list_args[], struct timeval before){ //fica a faltar a parte de meter o tempo a contar
-    char outfilename[40];
-    char errorsfilename[40];
+int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *folder, char *outputs_file){
+    char outfilename[100];
+    char errorsfilename[100];
     struct timeval after;
     pid_t pid = fork();
 
@@ -28,8 +27,8 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before){ //fica a
             perror("Erro ao criar processo filho");
             return -1;
         case 0:
-            sprintf(outfilename, "%d_output.txt", t.id);
-            sprintf(errorsfilename, "%d_errors.txt", t.id);
+            sprintf(outfilename, "%s/%d_output.txt",folder, t.id);
+            sprintf(errorsfilename, "%s/%d_errors.txt",folder, t.id);
 
             int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
             if (fdout == -1) {
@@ -57,7 +56,9 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before){ //fica a
             set_realtime(t,ms);
             status_finished(t);
 
-            int fd = open(OUTPUTS_FILE,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+
+
+            int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
             if (fd == -1) {
                 perror("Didn't open outputs file");
                 return -1;
@@ -100,13 +101,13 @@ int exec_command(char* command){
     return exec_ret;
 }
 
-int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval before){
-    char outfilename[40];
-    char errorsfilename[40];
+int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval before, char *folder, char *outputs_file){
+    char outfilename[100];
+    char errorsfilename[100];
     struct timeval after;
 
-    sprintf(outfilename, "%d_output.txt", t.id);
-    sprintf(errorsfilename, "%d_errors.txt", t.id);
+    sprintf(outfilename, "%s/%d_output.txt",folder, t.id);
+    sprintf(errorsfilename, "%s/%d_errors.txt",folder, t.id);
 
     int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fdout == -1) {
@@ -126,44 +127,63 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                        perror("PIPELINE: Erro ao criar processo filho");
-                        break;
+                    perror("PIPELINE: Erro ao criar processo filho");
+                    break;
 
                 case 0 : 
-                        close(pipes[i][0]);
-                        dup2(pipes[i][1],1);
-                        exec_command(tasks[i]);
+                    close(pipes[i][0]);
+                    dup2(pipes[i][1],1);
+
+                    dup2(fderr,2);
+                    close(fderr);
+
+                    exec_command(tasks[i]);
                 default:
-                        close(pipes[i][1]);
+                    close(pipes[i][1]);
+                    close(fderr);
             }
         }
         else{
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                        perror("PIPELINE: Erro ao criar processo filho");
-                        break;
+                    perror("PIPELINE: Erro ao criar processo filho");
+                    break;
                 case 0 :
-                        close(pipes[i][0]);
-                        dup2(pipes[i-1][0], 0);
-                        close(pipes[i-1][0]);
+                    close(pipes[i][0]);
+                    dup2(pipes[i-1][0], 0);
+                    close(pipes[i-1][0]);
 
-                        dup2(pipes[i][1],1);
-                        close(pipes[i][1]);
-                        exec_command(tasks[i]);
+                    dup2(pipes[i][1],1);
+                    close(pipes[i][1]);
+
+                    dup2(fderr,2);
+                    close(fderr);
+
+                    exec_command(tasks[i]);
                 default:
-                        close(pipes[i-1][0]);
-                        close(pipes[i][1]);                        
+                    close(pipes[i-1][0]);
+                    close(pipes[i][1]);
+                    close(fderr);
             }
         }
         if(i == num_tasks-1){
             switch(fork()){
                 case 0 :
-                        dup2(pipes[i-1][0],0);
-                        close(pipes[i-1][0]);
-                        exec_command(tasks[i]);
+                    dup2(pipes[i-1][0],0);
+                    close(pipes[i-1][0]);
+
+                    dup2(fdout,1);
+                    close(fdout);
+
+                    dup2(fderr,2);
+                    close(fderr);
+
+                    exec_command(tasks[i]);
                 default :
-                close(pipes[i-1][0]);
+                    close(pipes[i-1][0]);
+                    close(fdout);
+                    close(fderr);
             }
         }
     }
@@ -180,7 +200,7 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
     set_realtime(t,ms);
     status_finished(t);
 
-    int fd = open(OUTPUTS_FILE,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd == -1) {
         perror("Didn't open outputs file");
         return -1;
@@ -202,8 +222,8 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
     return 0;
 }
 
-int status(Task_List list_tasks, Task_List finished_tasks){
-    int fd = open(OUTPUTS_FILE,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+int status(Task_List* list_tasks, Task_List* finished_tasks, char *outputs_file){
+    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd == -1) {
         perror("Didn't open outputs file");
         return -1;
@@ -217,6 +237,7 @@ int status(Task_List list_tasks, Task_List finished_tasks){
     while(current != NULL){
         Task t = get_task(current);
         sprintf(line,"Task %d\nCommand: %s\n", t.id,t.command);
+        current = current->next;
     }
 
     current = finished_tasks;
@@ -226,13 +247,19 @@ int status(Task_List list_tasks, Task_List finished_tasks){
     while(current != NULL){
         Task t = get_task(current);
         sprintf(line,"Task %d\nCommand: %s\nTime used: %d\n", t.id,t.command,t.real_time);
+        current = current->next;
     }
     close(fd);
 
     return 0;
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
+
+    if(argc != 4 || (strcmp(argv[3],"fcfs")!=0 && strcmp(argv[3],"sjf")!=0)){
+        printf("SERVER: Invalid arguments");
+        return -1;
+    }
 
     //cria fifo cliente-servidor
     if(mkfifo(CLIENT_SERVER, 0666) == -1){
@@ -256,13 +283,13 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    char outputsfile[10];
-    sprintf(outputsfile, "%s.txt",OUTPUTS_FILE);
+    char outputsfile[100];
+    sprintf(outputsfile, "%s/outputs_file.txt",argv[1]);
 
 
     Task t;
-    Task_List list_tasks;
-    Task_List finished_tasks;
+    Task_List* list_tasks;
+    Task_List* finished_tasks;
     char *list[MAX];
     char *copy = strdup(t.command);
     struct timeval before;
@@ -274,11 +301,12 @@ int main(int argc, char *argv[]){
             set_id(t,task_id);
             task_id++;
             status_executing(t);
-            add_Task(&list_tasks,t);
+            add_Task_fcfs(&list_tasks,t);
 
-            //Envio do id da tarefa para o servidor
+            //Envio do id da tarefa para o cliente
             char fifoc_name[30];
             sprintf(fifoc_name,SERVER_CLIENT"%d",t.pid);
+
 
             int fdc = open(fifoc_name,O_WRONLY);
             if(fdc==-1){
@@ -288,17 +316,19 @@ int main(int argc, char *argv[]){
             write(fdc,&aux,sizeof (int));
             close(fdc);
 
+            //provavelmente fazer aqui um ciclo para executar as tarefas da list_tasks
+
             if(t.arg==ONE){ // -u
-                argsToList(t.command,list);       //tem que se mudar o status da task
-                execute_task_ONE(t, list, before);
+                argsToList(t.command,list);
+                execute_task_ONE(t, list, before, argv[1],outputsfile);
             }
             else if(t.arg==PIPELINE){ // -p
                 int n = commandsToList(t,list);
-                execute_task_PIPELINE(t,list,n,before);
+                execute_task_PIPELINE(t,list,n,before, argv[1],outputsfile);
             }
         }
         else if(t.type == STATUS){
-            status(list_tasks,finished_tasks);
+            status(list_tasks,finished_tasks,outputsfile);
         }
     }
 

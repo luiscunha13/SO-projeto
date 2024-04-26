@@ -89,15 +89,51 @@ void status_finished(Task t){
     t.status = FINISHED;
 }
 
-void add_Task(Task_List* list, Task task){ //mete a task à cabeça da lista
-    Task_List new = malloc(sizeof (struct Task_List));
-
+void add_Task_fcfs(Task_List** list, Task task){ //mete a task no fim da list - first come, first served
+    Task_List* new = malloc(sizeof (struct Task_List));
     new->task = task;
-    new->next = (*list);
-    (*list) = new;
+    new->next=NULL;
+
+    if(list == NULL){
+        list = new;
+
+    }
+
+    Task_List* current = list;
+    while(current->next != NULL)
+        current = current->next;
+
+    current->next = new;
 }
 
-Task get_task(Task_List t){
+void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescente de tempo - shortest job first
+    Task_List* new = malloc(sizeof (struct Task_List));
+    new->task = task;
+    new->next=NULL;
+
+    if(*list == NULL || (*list)->task.exp_time >= task.exp_time){
+        new->next = *list;
+        *list = new;
+    }
+    else{
+        Task_List *current = *list;
+        while(current->next != NULL && current->next->task.exp_time < task.exp_time){
+            current = current->next;
+        }
+        new->next = current->next;
+        current->next = new;
+    }
+}
+
+void remove_head_Task(Task_List** list){ // quando a task é feita é removida da lista
+    if(list!=NULL){
+        Task_List* aux = *list;
+        *list = (*list)->next;
+        free(aux);
+    }
+}
+
+Task get_task(Task_List* t){
     return t->task;
 }
 
