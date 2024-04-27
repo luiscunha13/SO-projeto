@@ -41,11 +41,7 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
                 return -1;
             }
 
-            int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
-            if (fd == -1) {
-                perror("EXECUTE_ONE: Didn't open outputs file");
-                return -1;
-            }
+
 
             dup2(fdout, 1);
             dup2(fderr,2);
@@ -53,28 +49,7 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
             close(fderr);
 
             execvp(list_args[0], list_args);
-            gettimeofday(&after,NULL);
 
-            close(fdout);
-
-            long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
-
-            t.real_time=ms;
-            t.status=FINISHED;
-
-
-            char lines[50];
-            sprintf(lines,"Task %d \n Time spent: %ld ms\n", t.id,t.real_time);
-
-            write(fd,lines,strlen(lines));
-            /*
-            ssize_t bytes_written =
-            if (bytes_written == -1) {
-                perror("EXECUTE_ONE: Error writing to outputs file");
-                close(fd);
-                close(fderr);
-                return -1;
-            }*/
 
             close(fderr);
             _exit(0);
@@ -86,6 +61,32 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
                 printf("Task %d did not finish correctly", t.id);
             break;
     }
+
+    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd == -1) {
+        perror("EXECUTE_ONE: Didn't open outputs file");
+        return -1;
+    }
+
+    gettimeofday(&after,NULL);
+
+    long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
+
+    t.real_time=ms;
+    t.status=FINISHED;
+
+    char lines[50];
+    sprintf(lines,"Task %d \nTime spent: %ld ms\n\n", t.id,t.real_time);
+
+
+    ssize_t bytes_written = write(fd,&lines,strlen(lines));
+    if (bytes_written == -1) {
+        perror("EXECUTE_ONE: Error writing to outputs file");
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
 
     return 0;
 }
@@ -129,7 +130,7 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                    perror("EXECUTE_PIPELINE: Erro ao criar processo filho");
+                    perror("EXECUTE_PIPELINE: Problem creating son process");
                     break;
 
                 case 0 : 
@@ -149,7 +150,7 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                    perror("EXECUTE_PIPELINE: Erro ao criar processo filho");
+                    perror("EXECUTE_PIPELINE: Problem creating son process");
                     break;
                 case 0 :
                     close(pipes[i][0]);
@@ -325,7 +326,7 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
                 execute_task_ONE(t, list, before, argv[1],outputsfile);
             }
             else if(t.arg==PIPELINE){ // -p
-                int n = commandsToList(t,list);
+                int n = commandsToList(t.command,list);
                 execute_task_PIPELINE(t,list,n,before, argv[1],outputsfile);
             }
 

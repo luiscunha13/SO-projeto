@@ -1,0 +1,1 @@
+ls: impossível aceder a '': Ficheiro ou pasta inexistente

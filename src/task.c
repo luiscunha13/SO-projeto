@@ -50,9 +50,9 @@ void argsToList(char *command, char *list[]){
     list[i]=NULL;
 }
 
-int commandsToList(Task t, char *list[]){
+int commandsToList(char *command, char *list[]){
 
-    char *copy = strdup(t.command);
+    char *copy = command;
     char *token;
     int i=0;
 

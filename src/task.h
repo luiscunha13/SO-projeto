@@ -43,7 +43,7 @@ void parse_Task_Status(Task t, pid_t pid);
 
 void argsToList(char *command, char *list[]);
 
-int commandsToList(Task t, char *list[]);
+int commandsToList(char *command, char *list[]);
 
 void set_realtime(Task t, long time);
 
