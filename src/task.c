@@ -10,7 +10,7 @@ void parse_Task_Execute(Task t,pid_t pid, char *argv[]){
 
     t.pid = pid;
 
-    char *aux = NULL;
+    char *aux = malloc(strlen(argv[4]) + 1);
     strcpy(aux,argv[4]);
     if (aux[0] == '"' && aux[strlen(aux)-1] == '"') {
         aux[strlen(aux)-1] = '\0';
@@ -28,6 +28,8 @@ void parse_Task_Execute(Task t,pid_t pid, char *argv[]){
     t.status = WAITING;
 
     t.id = -1;
+
+    printf("task with info");
 }
 
 void parse_Task_Status(Task t, pid_t pid){
@@ -94,12 +96,12 @@ void add_Task_fcfs(Task_List** list, Task task){ //mete a task no fim da list - 
     new->task = task;
     new->next=NULL;
 
-    if(list == NULL){
-        list = new;
+    if(*list == NULL){
+        *list = new;
 
     }
 
-    Task_List* current = list;
+    Task_List* current = *list;
     while(current->next != NULL)
         current = current->next;
 
@@ -123,6 +125,13 @@ void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescent
         new->next = current->next;
         current->next = new;
     }
+}
+
+void add_task_head(Task_List** list, Task task){
+    Task_List* new = malloc(sizeof (struct Task_List));
+    new->task = task;
+    new->next=*list;
+    *list=new;
 }
 
 void remove_head_Task(Task_List** list){ // quando a task é feita é removida da lista

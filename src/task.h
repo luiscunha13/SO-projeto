@@ -57,6 +57,8 @@ void add_Task_fcfs(Task_List** list, Task task);
 
 void add_task_sjf(Task_List** list, Task task);
 
+void add_task_head(Task_List** list, Task task);
+
 void remove_head_Task(Task_List** list);
 
 Task get_task(Task_List* t);
