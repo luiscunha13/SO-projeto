@@ -43,7 +43,7 @@ int main(int argc, char * argv[]){
     else if (argc == 2 && strcmp(argv[1],"status")==0){
         //parse_Task_Status(t, getpid());
         t.type = STATUS;
-        t.pid = pid;
+        t.pid = pid;;
     }
     else{
         printf("CLIENT: invalid arguments\n");
@@ -78,9 +78,18 @@ int main(int argc, char * argv[]){
     }
 
     int id;
+
     read(server_client,&id,sizeof (int));
 
-    printf("Task id: %d\n",id);
+    if(id==-1){
+        printf("Task status\n");
+    }
+    else{
+        printf("Task id: %d\n",id);
+    }
+
+
+
 
     close(server_client);
 

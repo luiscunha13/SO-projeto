@@ -35,7 +35,7 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
                 perror("EXECUTE_ONE: Didn't open output file");
                 return -1;
             }
-            int fderr = open(errorsfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+            int fderr = open(errorsfilename, O_WRONLY | O_CREAT | O_APPEND, 0666);
             if (fderr == -1) {
                 perror("EXECUTE_ONE: Didn't open errors file");
                 return -1;
@@ -62,12 +62,6 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
             break;
     }
 
-    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    if (fd == -1) {
-        perror("EXECUTE_ONE: Didn't open outputs file");
-        return -1;
-    }
-
     gettimeofday(&after,NULL);
 
     long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
@@ -78,6 +72,11 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
     char lines[50];
     sprintf(lines,"Task %d \nTime spent: %ld ms\n\n", t.id,t.real_time);
 
+    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
+    if (fd == -1) {
+        perror("EXECUTE_ONE: Didn't open outputs file");
+        return -1;
+    }
 
     ssize_t bytes_written = write(fd,&lines,strlen(lines));
     if (bytes_written == -1) {
@@ -91,17 +90,15 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
     return 0;
 }
 
-int exec_command(char* command){
+void exec_command(char* command){
 
     char *exec_args[MAX];
 
     argsToList(command,exec_args);
 
-    int exec_ret=0;
 
-    exec_ret=execvp(exec_args[0],exec_args);
+    execvp(exec_args[0],exec_args);
 
-    return exec_ret;
 }
 
 int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval before, char *folder, char *outputs_file){
@@ -118,19 +115,19 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
         return -1;
     }
 
-    int fderr = open(errorsfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int fderr = open(errorsfilename, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fderr == -1) {
         perror("EXECUTE_PIPELINE: Didn't open errors file");
         return -1;
     }
 
-    int pipes[num_tasks -1][2];
+    int pipes[num_tasks][2];
     for(int i = 0; i< num_tasks; i++){
         if(i == 0){
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                    perror("EXECUTE_PIPELINE: Problem creating son process");
+                    perror("EXECUTE_PIPELINE: Problem creating child process");
                     break;
 
                 case 0 : 
@@ -141,16 +138,39 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
                     close(fderr);
 
                     exec_command(tasks[i]);
+                    break;
                 default:
                     close(pipes[i][1]);
                     close(fderr);
+                    break;
+            }
+        }
+        else if(i == num_tasks-1){
+            switch(fork()){
+                case 0 :
+                    dup2(pipes[i-1][0],0);
+                    close(pipes[i-1][0]);
+
+                    dup2(fdout,1);
+                    close(fdout);
+
+                    dup2(fderr,2);
+                    close(fderr);
+
+                    exec_command(tasks[i]);
+                    break;
+                default :
+                    close(pipes[i-1][0]);
+                    close(fdout);
+                    close(fderr);
+                    break;
             }
         }
         else{
             pipe(pipes[i]);
             switch(fork()){
                 case -1:
-                    perror("EXECUTE_PIPELINE: Problem creating son process");
+                    perror("EXECUTE_PIPELINE: Problem creating child process");
                     break;
                 case 0 :
                     close(pipes[i][0]);
@@ -164,53 +184,47 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
                     close(fderr);
 
                     exec_command(tasks[i]);
+                    break;
                 default:
                     close(pipes[i-1][0]);
                     close(pipes[i][1]);
                     close(fderr);
+                    break;
             }
         }
-        if(i == num_tasks-1){
-            switch(fork()){
-                case 0 :
-                    dup2(pipes[i-1][0],0);
-                    close(pipes[i-1][0]);
 
-                    dup2(fdout,1);
-                    close(fdout);
-
-                    dup2(fderr,2);
-                    close(fderr);
-
-                    exec_command(tasks[i]);
-                default :
-                    close(pipes[i-1][0]);
-                    close(fdout);
-                    close(fderr);
-            }
-        }
     }
+    close(fdout);
+
+    int status;
+    int aux=0;
     for(int i = 0; i<num_tasks;i++){
-        wait(NULL);
+        wait(&status);
+        if(WIFEXITED(status))
+            continue;
+        else{
+            aux=1;
+            printf("Task %d did not finish correctly", t.id);
+            break;
+        }
     }
+    if(aux==0) printf("Task %d finished \n", t.id);
 
     gettimeofday(&after,NULL);
-
-    close(fdout);
 
     long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
 
     t.real_time=ms;
     t.status=FINISHED;
 
-    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd == -1) {
         perror("EXECUTE_PIPELINE: Didn't open outputs file");
         return -1;
     }
 
     char lines[50];
-    sprintf(lines,"Task %d \n Time spent: %ld ms\n", t.id,t.real_time);
+    sprintf(lines,"Task %d \nTime spent: %ld ms\n\n", t.id,t.real_time);
 
     ssize_t bytes_written = write(fd,lines,strlen(lines));
     if (bytes_written == -1) {
@@ -226,7 +240,7 @@ int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval b
 }
 
 int status(Task_List* list_tasks, Task_List* finished_tasks, char *outputs_file){
-    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd == -1) {
         perror("STATUS: Didn't open outputs file");
         return -1;
@@ -238,8 +252,8 @@ int status(Task_List* list_tasks, Task_List* finished_tasks, char *outputs_file)
     write(fd,line,sizeof(line));
 
     while(current != NULL){
-        Task t = get_task(current);
-        sprintf(line,"Task %d\nCommand: %s\n", t.id,t.command);
+        //Task t = get_task(current);
+        sprintf(line,"Task %d\nCommand: %s\n", current->task.id,current->task.command);
         current = current->next;
     }
 
@@ -248,8 +262,8 @@ int status(Task_List* list_tasks, Task_List* finished_tasks, char *outputs_file)
     write(fd,line,sizeof(line));
 
     while(current != NULL){
-        Task t = get_task(current);
-        sprintf(line,"Task %d\nCommand: %s\nTime used: %ld ms\n", t.id,t.command,t.real_time);
+        //Task t = get_task(current);
+        sprintf(line,"Task %d\nCommand: %s\nTime used: %ld ms\n", current->task.id,current->task.command,current->task.real_time);
         current = current->next;
     }
     close(fd);
@@ -297,6 +311,8 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
     //char *copy = strdup(t.command);
     struct timeval before;
 
+
+
     while(read(client_server_read,&t, sizeof(struct Task))>0){
         if(t.type == EXECUTE){
             gettimeofday(&before,NULL);
@@ -335,6 +351,19 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
 
         }
         else if(t.type == STATUS){
+
+            char fifoc_name[30];
+            sprintf(fifoc_name,"server_client_%d",t.pid);
+
+            int fdc = open(fifoc_name,O_WRONLY);
+            if(fdc==-1){
+                perror("SERVER: Dind't open server-client fifo to write\n");
+                return -1;
+            }
+            int aux = -1;
+            write(fdc,&aux,sizeof (aux));
+            close(fdc);
+
             status(list_tasks,finished_tasks,outputsfile);
         }
     }

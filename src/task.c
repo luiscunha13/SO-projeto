@@ -62,7 +62,7 @@ int commandsToList(char *command, char *list[]){
     }
     list[i]=NULL;
 
-    return i-1;
+    return i;
 }
 
 
