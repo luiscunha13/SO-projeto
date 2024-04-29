@@ -91,16 +91,11 @@ int execute_task_ONE(Task t, char *list_args[], struct timeval before, char *fol
 }
 
 void exec_command(char* command){
-
     char *exec_args[MAX];
-
-    argsToList(command,exec_args);
-
-
-    execvp(exec_args[0],exec_args);
-
+    argsToList(command, exec_args);
+    execvp(exec_args[0], exec_args);
 }
-
+//para o -p
 int execute_task_PIPELINE(Task t, char *tasks[], int num_tasks, struct timeval before, char *folder, char *outputs_file){
     char outfilename[100];
     char errorsfilename[100];
