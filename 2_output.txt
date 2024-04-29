@@ -1,7 +1,0 @@
-Command received:  ls -l
-Comando: ls
-Argumentos: ls -l 
-total 56
--rwxrwxr-x 1 tomsbarbosa tomsbarbosa 23496 Apr 29 22:07 client
-prw-rw-r-- 1 tomsbarbosa tomsbarbosa     0 Apr 29 22:08 client_server
--rwxrwxr-x 1 tomsbarbosa tomsbarbosa 31760 Apr 29 22:07 orchestrator

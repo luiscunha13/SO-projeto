@@ -4,49 +4,6 @@
 #include<unistd.h>
 #include"task.h"
 
-/*
-void parse_Task_Execute(Task t,pid_t pid, char *argv[]){
-    t.type = EXECUTE;
-
-    t.pid = pid;
-
-    char *aux = malloc(strlen(argv[4]) + 1);
-    if(aux == NULL){
-        perror("Erro ao alocar espaço para o parse");
-        return;
-    }
-
-    strcpy(aux,argv[4]);
-    if (aux[0] == '"' && aux[strlen(aux)-1] == '"') {
-        aux[strlen(aux)-1] = '\0';
-        aux++;
-    }
-    strcpy(t.command,aux);
-    printf("comand%s\n",t.command);
-
-    if(strcmp(argv[3],"-u")==0) t.arg = ONE;
-    else if(strcmp(argv[3],"-p")==0) t.arg= PIPELINE;
-
-
-    t.exp_time = atoi(argv[2]);
-
-    t.real_time = -1;
-
-    t.status = WAITING;
-
-    t.id = -1;
-
-    free(aux);
-
-}
-
-
-
-void parse_Task_Status(Task t, pid_t pid){
-    t.type = STATUS;
-    t.pid = pid;
-}
-*/
 
 void argsToList(char *command, char *list[]){
     char *copy = strdup(command);
