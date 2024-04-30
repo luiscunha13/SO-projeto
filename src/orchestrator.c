@@ -161,6 +161,7 @@ long execute_task_PIPELINE(int id, char *tasks[], int num_tasks, struct timeval 
         }
 
     }
+    
 
 
     int status;
@@ -199,6 +200,7 @@ long execute_task_PIPELINE(int id, char *tasks[], int num_tasks, struct timeval 
     }
 
     close(fdout);
+   
 
     return ms;
 }
@@ -270,7 +272,7 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
 
     Task t;
     Task_List* list_tasks = NULL;
-    Task_List* finished_tasks = NULL;
+    //Task_List* finished_tasks = NULL;
     char *list[MAX];
     //char *copy = strdup(t.command);
     struct timeval before;
@@ -318,7 +320,7 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
                 }
             }
 
-            //remove_head_Task(&list_tasks);
+            remove_head_Task(&list_tasks);
             //add_task_head(&finished_tasks,t);
 
         }

@@ -71,6 +71,10 @@ void status_finished(Task t){
 
 void add_Task_fcfs(Task_List** list, Task task){ //mete a task no fim da list - first come, first served
     Task_List* new = malloc(sizeof (struct Task_List));
+    if(new == NULL){
+        perror("Erro ao alocar memória para a lista fcfs");
+        exit(EXIT_FAILURE);
+    }
     new->task = task;
     new->next=NULL;
 
@@ -88,6 +92,10 @@ void add_Task_fcfs(Task_List** list, Task task){ //mete a task no fim da list - 
 
 void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescente de tempo - shortest job first
     Task_List* new = malloc(sizeof (struct Task_List));
+    if(new == NULL){
+        perror("Erro ao alocar memória para a lista sjf");
+        exit(EXIT_FAILURE);
+    }
     new->task = task;
     new->next=NULL;
 
@@ -107,6 +115,9 @@ void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescent
 
 void add_task_head(Task_List** list, Task task){
     Task_List* new = malloc(sizeof (struct Task_List));
+    if( new == NULL){
+        perror("Erro ao alocar memória para a lista de add_task_head");
+    }
     new->task = task;
     new->next=*list;
     *list=new;

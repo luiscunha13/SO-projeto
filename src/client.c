@@ -25,6 +25,10 @@ int main(int argc, char * argv[]){
         t.id = -1;
 
         char *aux = malloc(strlen(argv[4]) + 1);
+        if(aux ==  NULL){
+            perror("Erro ao alocar espaço para o parse");
+            exit(EXIT_FAILURE);
+        }
         strcpy(aux,argv[4]);
         if (aux[0] == '"' && aux[strlen(aux)-1] == '"') {
             aux[strlen(aux)-1] = '\0';
@@ -43,7 +47,7 @@ int main(int argc, char * argv[]){
     else if (argc == 2 && strcmp(argv[1],"status")==0){
         //parse_Task_Status(t, getpid());
         t.type = STATUS;
-        t.pid = pid;;
+        t.pid = pid;
     }
     else{
         printf("CLIENT: invalid arguments\n");
