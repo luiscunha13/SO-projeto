@@ -42,10 +42,11 @@ void argsToList(char *command, char *list[]);
 
 int commandsToList(char *command, char *list[]);
 
+void addsched_task(Task_List** list, Task* task, char* sched_policy);
 
 void add_Task_fcfs(Task_List** list, Task* task);
 
-void add_task_sjf(Task_List** list, Task* task);
+void add_Task_sjf(Task_List** list, Task* task);
 
 void add_task_head(Task_List** list, Task* task);
 

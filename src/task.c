@@ -43,6 +43,14 @@ int commandsToList(char *command, char *list[]){
 
 }
 
+void addsched_task(Task_List** list, Task* task, char* sched_policy){
+    if(strcmp(sched_policy, "fcfs") == 0){
+        add_Task_fcfs(list, task);
+    } else if (strcmp(sched_policy, "sjf") == 0){
+        add_Task_sjf(list, task);
+    }
+}
+
 
 void add_Task_fcfs(Task_List** list, Task* task){ //mete a task no fim da list - first come, first served
     Task_List* new = malloc(sizeof (struct Task_List));
@@ -68,7 +76,8 @@ void add_Task_fcfs(Task_List** list, Task* task){ //mete a task no fim da list -
 
 }
 
-void add_task_sjf(Task_List** list, Task* task){ //mete a task por ordem crescente de tempo - shortest job first
+
+void add_Task_sjf(Task_List** list, Task* task){ //mete a task por ordem crescente de tempo - shortest job first
     Task_List* new = malloc(sizeof (struct Task_List));
     if(new == NULL){
         perror("Erro ao alocar memória para a lista sjf");

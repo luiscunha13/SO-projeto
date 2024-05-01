@@ -283,7 +283,7 @@ int status(Task_List* list_tasks, char *outputs_file, char *fifoc_name){
 int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
 
     if(argc != 4 || (strcmp(argv[3],"fcfs")!=0 && strcmp(argv[3],"sjf")!=0)){
-        printf("SERVER: Invalid arguments\n");
+        printf("SERVER: Invalid shedule policy\n");
         return -1;
     }
 
@@ -319,16 +319,20 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
     Task_List* list_tasks = NULL;
     struct timeval before;
 
+    
 
     while(read(client_server_read,t, sizeof(struct Task))>0){
         if(t->type == EXECUTE){
+            //int numtasks = 0;
+            //int maxtasks = atoi(argv[2]);
+             // aqui é onde ele vai estar sempre a correr
             gettimeofday(&before,NULL);
             t->id=task_id;
             task_id++;
             char aux[20];
             sprintf(aux, "Task id: %d\n", t->id);
             t->status=EXECUTING;
-            add_Task_fcfs(&list_tasks,t);
+            addsched_task(&list_tasks, t, argv[3]);
 
             //Envio do id da tarefa para o cliente
             char fifoc_name[30];
@@ -342,26 +346,37 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
             }
             write(fdc,&aux,strlen(aux));
             close(fdc);
+            
+            //while(1){
+               // if(numtasks<maxtasks){
+                    //provavelmente fazer aqui um ciclo para executar as tarefas da list_tasks
+                    //numtasks++;
+                    if(t->arg==ONE){ // -u
+                        long time = execute_task_ONE(t->id, t->command, before, argv[1],outputsfile);
+                        if(time != -1){
+                            t->real_time= time;
+                            t->status = FINISHED;
+                           // numtasks--;
+                        }
+                    }
+                    else if(t->arg==PIPELINE){ // -p
+                        long time = execute_task_PIPELINE(t->id,t->command,before, argv[1],outputsfile);
+                        if(time != -1){
+                            t->real_time= time;
+                            t->status = FINISHED;
+                           // numtasks--;
+                        }
+                    }
+                    
 
-            //provavelmente fazer aqui um ciclo para executar as tarefas da list_tasks
+                    remove_head_Task(&list_tasks);
+                //}
+                //else{
+                //    wait(NULL);
+                //}
+            
 
-            if(t->arg==ONE){ // -u
-                long time = execute_task_ONE(t->id, t->command, before, argv[1],outputsfile);
-                if(time != -1){
-                    t->real_time= time;
-                    t->status = FINISHED;
-                }
-            }
-            else if(t->arg==PIPELINE){ // -p
-                long time = execute_task_PIPELINE(t->id,t->command,before, argv[1],outputsfile);
-                if(time != -1){
-                    t->real_time= time;
-                    t->status = FINISHED;
-                }
-            }
-
-            remove_head_Task(&list_tasks);
-
+            //}
         }
         else if(t->type == STATUS){
 
