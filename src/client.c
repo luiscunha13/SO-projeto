@@ -12,20 +12,20 @@
 
 int main(int argc, char * argv[]){
 
-    Task t;
+    Task* t = malloc(sizeof(struct Task));
     pid_t pid = getpid();
 
     if(argc == 5 && strcmp(argv[1],"execute")==0){
         //parse_Task_Execute(t, pid,argv);
-        t.type = EXECUTE;
-        t.pid = pid;
-        t.exp_time = atoi(argv[2]);
-        t.real_time = -1;
-        t.status = WAITING;
-        t.id = -1;
+        t->type = EXECUTE;
+        t->pid = pid;
+        t->exp_time = atoi(argv[2]);
+        t->real_time = -1;
+        t->status = SCHEDULED;
+        t->id = -1;
 
         char *aux = malloc(strlen(argv[4]) + 1);
-        if(aux ==  NULL){
+        if(aux == NULL){
             perror("Erro ao alocar espaço para o parse");
             exit(EXIT_FAILURE);
         }
@@ -34,10 +34,10 @@ int main(int argc, char * argv[]){
             aux[strlen(aux)-1] = '\0';
             aux++;
         }
-        strcpy(t.command,aux);
+        strcpy(t->command,aux);
 
-        if(strcmp(argv[3],"-u")==0) t.arg = ONE;
-        else if(strcmp(argv[3],"-p")==0) t.arg= PIPELINE;
+        if(strcmp(argv[3],"-u")==0) t->arg = ONE;
+        else if(strcmp(argv[3],"-p")==0) t->arg= PIPELINE;
         else{
             printf("CLIENT: invalid arguments\n");
             return -1;
@@ -46,8 +46,8 @@ int main(int argc, char * argv[]){
     }
     else if (argc == 2 && strcmp(argv[1],"status")==0){
         //parse_Task_Status(t, getpid());
-        t.type = STATUS;
-        t.pid = pid;
+        t->type = STATUS;
+        t->pid = pid;
     }
     else{
         printf("CLIENT: invalid arguments\n");
@@ -59,9 +59,11 @@ int main(int argc, char * argv[]){
     char fifoc_name[30];
     sprintf(fifoc_name,"server_client_%d",pid);
 
-    if(mkfifo(fifoc_name, 0666) == -1){
-        perror("CLIENT: mkfifo server-client\n");
-        return -1;
+    if (access(fifoc_name, F_OK) == -1){
+        if(mkfifo(fifoc_name, 0666) == -1){
+            perror("CLIENT: mkfifo server-client\n");
+            return -1;
+        }
     }
 
     // Aqui ele vai enviar a task para o servidor
@@ -71,7 +73,7 @@ int main(int argc, char * argv[]){
         return -1;
     }
 
-    write(cs_fifo,&t,sizeof(struct Task));
+    write(cs_fifo,t,sizeof(struct Task));
     close(cs_fifo);
 
 

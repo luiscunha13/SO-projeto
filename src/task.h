@@ -9,7 +9,7 @@ typedef enum TaskType {
 } TaskType;
 
 typedef enum TaskStatus{
-    WAITING,
+    SCHEDULED,
     EXECUTING,
     FINISHED
 } TaskStatus;
@@ -33,34 +33,24 @@ typedef struct Task{
 }Task;
 
 typedef struct Task_List{
-    Task task;
+    Task* task;
     struct Task_List *next;
 }Task_List;
 
-void parse_Task_Execute(Task t,pid_t pid, char *argv[]);
-
-void parse_Task_Status(Task t, pid_t pid);
 
 void argsToList(char *command, char *list[]);
 
 int commandsToList(char *command, char *list[]);
 
-void set_realtime(Task t, long time);
 
-void set_id(Task t, int id);
+void add_Task_fcfs(Task_List** list, Task* task);
 
-void status_executing(Task t);
+void add_task_sjf(Task_List** list, Task* task);
 
-void status_finished(Task t);
-
-void add_Task_fcfs(Task_List** list, Task task);
-
-void add_task_sjf(Task_List** list, Task task);
-
-void add_task_head(Task_List** list, Task task);
+void add_task_head(Task_List** list, Task* task);
 
 void remove_head_Task(Task_List** list);
 
-Task get_task(Task_List* t);
+Task* get_task(Task_List* t);
 
 #endif

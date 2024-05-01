@@ -44,53 +44,31 @@ int commandsToList(char *command, char *list[]){
 }
 
 
-void send_status(int client_fifo, int status){
-    size_t b_written = write(client_fifo, &status,sizeof(status));
-    if(b_written == -1){
-        perror("Erro ao escrever status no FIFO do cliente");
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-void set_realtime(Task t, long time){
-    t.real_time = time;
-}
-
-void set_id(Task t, int id){
-    t.id = id;
-}
-
-void status_executing(Task t){
-    t.status = EXECUTING;
-}
-
-void status_finished(Task t){
-    t.status = FINISHED;
-}
-
-void add_Task_fcfs(Task_List** list, Task task){ //mete a task no fim da list - first come, first served
+void add_Task_fcfs(Task_List** list, Task* task){ //mete a task no fim da list - first come, first served
     Task_List* new = malloc(sizeof (struct Task_List));
     if(new == NULL){
         perror("Erro ao alocar memória para a lista fcfs");
         exit(EXIT_FAILURE);
     }
     new->task = task;
-    new->next=NULL;
+    new->next = NULL;
 
     if(*list == NULL){
         *list = new;
 
     }
+    else{
+        Task_List* current = *list;
+        while(current->next != NULL)
+            current = current->next;
 
-    Task_List* current = *list;
-    while(current->next != NULL)
-        current = current->next;
+        current->next = new;
+    }
 
-    current->next = new;
+
 }
 
-void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescente de tempo - shortest job first
+void add_task_sjf(Task_List** list, Task* task){ //mete a task por ordem crescente de tempo - shortest job first
     Task_List* new = malloc(sizeof (struct Task_List));
     if(new == NULL){
         perror("Erro ao alocar memória para a lista sjf");
@@ -99,13 +77,13 @@ void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescent
     new->task = task;
     new->next=NULL;
 
-    if(*list == NULL || (*list)->task.exp_time >= task.exp_time){
+    if(*list == NULL || (*list)->task->exp_time >= task->exp_time){
         new->next = *list;
         *list = new;
     }
     else{
         Task_List *current = *list;
-        while(current->next != NULL && current->next->task.exp_time < task.exp_time){
+        while(current->next != NULL && current->next->task->exp_time < task->exp_time){
             current = current->next;
         }
         new->next = current->next;
@@ -113,7 +91,7 @@ void add_task_sjf(Task_List** list, Task task){ //mete a task por ordem crescent
     }
 }
 
-void add_task_head(Task_List** list, Task task){
+void add_task_head(Task_List** list, Task* task){
     Task_List* new = malloc(sizeof (struct Task_List));
     if( new == NULL){
         perror("Erro ao alocar memória para a lista de add_task_head");
@@ -131,7 +109,7 @@ void remove_head_Task(Task_List** list){ // quando a task é feita é removida d
     }
 }
 
-Task get_task(Task_List* t){
+Task* get_task(Task_List* t){
     return t->task;
 }
 
