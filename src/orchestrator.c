@@ -13,7 +13,10 @@
 
 int task_id=1;
 //para o -u
-long execute_task_ONE(int id, char *list_args[], struct timeval before, char *folder, char *outputs_file){
+long execute_task_ONE(int id, char *command, struct timeval before, char *folder, char *outputs_file){
+
+    char *list_args[MAX];
+    argsToList(command,list_args);
     char outfilename[100];
     struct timeval after;
     pid_t pid = fork();
@@ -55,7 +58,7 @@ long execute_task_ONE(int id, char *list_args[], struct timeval before, char *fo
     long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
 
     char lines[50];
-    sprintf(lines,"Task %d \nTime spent: %ld ms\n\n", id,ms);
+    sprintf(lines,"%d %s %ld ms\n", id,command,ms);
 
     int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd == -1) {
@@ -81,7 +84,10 @@ void exec_command(char* command){
     execvp(exec_args[0], exec_args);
 }
 //para o -p
-long execute_task_PIPELINE(int id, char *tasks[], int num_tasks, struct timeval before, char *folder, char *outputs_file){
+long execute_task_PIPELINE(int id, char *command, struct timeval before, char *folder, char *outputs_file){
+    char *tasks[MAX];
+    int num_tasks = commandsToList(command,tasks);
+
     char outfilename[100];
     struct timeval after;
 
@@ -188,7 +194,7 @@ long execute_task_PIPELINE(int id, char *tasks[], int num_tasks, struct timeval 
     }
 
     char lines[50];
-    sprintf(lines,"Task %d \nTime spent: %ld ms\n\n", id,ms);
+    sprintf(lines,"%d %s %ld\n", id,command,ms);
 
     ssize_t bytes_written = write(fd,lines,strlen(lines));
     if (bytes_written == -1) {
@@ -203,39 +209,73 @@ long execute_task_PIPELINE(int id, char *tasks[], int num_tasks, struct timeval 
     return ms;
 }
 
-int status(Task_List* list_tasks, char *outputs_file){
-    int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
-    if (fd == -1) {
-        perror("STATUS: Didn't open outputs file");
+int status(Task_List* list_tasks, char *outputs_file, char *fifoc_name){
+
+    int fdc = open(fifoc_name,O_WRONLY);
+    if(fdc==-1){
+        perror("SERVER: Dind't open server-client fifo to write\n");
         return -1;
     }
 
     Task_List* current = list_tasks;
     char line[MAX+50];
-    sprintf(line,"SCHEDULED/EXECUTING TASKS\n\n");
-    write(fd,line,strlen(line));
+    sprintf(line,"Executing \n");
+    write(fdc,&line,strlen(line));
 
     if(current == NULL){
-        sprintf(line,"Do not exist any task scheduled/executing\n\n");
-        write(fd,line,strlen(line));
+        sprintf(line,"\nScheduled\n\n");
+        write(fdc,&line,strlen(line));
     }
     else{
         while(current != NULL){
-            //Task t = get_task(current);
-            sprintf(line,"Task %d\nCommand: %s\n", current->task->id,current->task->command);
-            write(fd,line,strlen(line));
+            Task* t = get_task(current);
+            if(t->status == EXECUTING){
+                sprintf(line,"%d %s\n", t->id,t->command);
+                write(fdc,&line,strlen(line));
+            }
             current = current->next;
         }
-        close(fd);
+        sprintf(line,"\n");
+        write(fdc,&line,strlen(line));
+
+        current=list_tasks;
+        while(current != NULL){
+            Task* t = get_task(current);
+            if(t->status == SCHEDULED){
+                sprintf(line,"%d %s\n", t->id,t->command);
+                write(fdc,&line,strlen(line));
+            }
+            current = current->next;
+        }
+        sprintf(line,"\n");
+        write(fdc,&line,strlen(line));
     }
 
-    sprintf(line,"FINISHED TASKS\n");
-    write(fd,line,strlen(line));
+    sprintf(line,"Completed\n");
+    write(fdc,&line,strlen(line));
     //para as que já acabaram tem de se ler o ficheiro dos outputs e copiar
 
-    printf("Task status finished\n");
+    int fd = open(outputs_file,O_RDONLY);
+    if (fd == -1) {
+        perror("STATUS: Didn't open outputs file");
+        return -1;
+    }
+
+    ssize_t bytes_read;
+
+    while ((bytes_read = read(fd, line, MAX+50)) > 0) {
+        line[bytes_read] = '\0'; // Ensure buffer is null-terminated
+        write(fdc,&line,strlen(line));
+
+    }
+
+    if (bytes_read < 0) {
+        perror("STATUS: Error reading from outputs file");
+        return 1;
+    }
 
     close(fd);
+    close(fdc);
 
     return 0;
 }
@@ -277,16 +317,16 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
 
     Task* t = malloc(sizeof(struct Task));
     Task_List* list_tasks = NULL;
-    char *list[MAX];
     struct timeval before;
 
 
     while(read(client_server_read,t, sizeof(struct Task))>0){
         if(t->type == EXECUTE){
             gettimeofday(&before,NULL);
-            int aux = task_id;
             t->id=task_id;
             task_id++;
+            char aux[20];
+            sprintf(aux, "Task id: %d\n", t->id);
             t->status=EXECUTING;
             add_Task_fcfs(&list_tasks,t);
 
@@ -300,22 +340,20 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
                 perror("SERVER: Dind't open server-client fifo to write\n");
                 return -1;
             }
-            write(fdc,&aux,sizeof (int));
+            write(fdc,&aux,strlen(aux));
             close(fdc);
 
             //provavelmente fazer aqui um ciclo para executar as tarefas da list_tasks
 
             if(t->arg==ONE){ // -u
-                argsToList(t->command,list);
-                long time = execute_task_ONE(t->id, list, before, argv[1],outputsfile);
+                long time = execute_task_ONE(t->id, t->command, before, argv[1],outputsfile);
                 if(time != -1){
                     t->real_time= time;
                     t->status = FINISHED;
                 }
             }
             else if(t->arg==PIPELINE){ // -p
-                int n = commandsToList(t->command,list);
-                long time = execute_task_PIPELINE(t->id,list,n,before, argv[1],outputsfile);
+                long time = execute_task_PIPELINE(t->id,t->command,before, argv[1],outputsfile);
                 if(time != -1){
                     t->real_time= time;
                     t->status = FINISHED;
@@ -330,21 +368,14 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
             char fifoc_name[30];
             sprintf(fifoc_name,"server_client_%d",t->pid);
 
-            int fdc = open(fifoc_name,O_WRONLY);
-            if(fdc==-1){
-                perror("SERVER: Dind't open server-client fifo to write\n");
-                return -1;
-            }
+            status(list_tasks,outputsfile, fifoc_name);
 
-            int aux=-1;
-            write(fdc,&aux,sizeof (int));
-            close(fdc);
-
-            status(list_tasks,outputsfile);
+            printf("Status finished");
 
         }
     }
 
+    free(t);
     close(client_server_read);
     unlink(CLIENT_SERVER);
 

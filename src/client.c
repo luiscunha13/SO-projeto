@@ -83,15 +83,16 @@ int main(int argc, char * argv[]){
         return -1;
     }
 
-    int id;
-
-    read(server_client,&id,sizeof (int));
-
-    if(id==-1){
-        printf("Task status\n");
+    char line[MAX+50];
+    ssize_t bytes_read;
+    while((bytes_read =read(server_client,&line,MAX+50))>0){
+        line[bytes_read] = '\0';
+        printf("%s",line);
     }
-    else{
-        printf("Task id: %d\n",id);
+
+    if (bytes_read < 0) {
+        perror("CLIENT: Error reading from fifo server_client");
+        return -1;
     }
 
 
