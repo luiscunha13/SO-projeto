@@ -5,7 +5,9 @@
 
 typedef enum TaskType {
     EXECUTE,
-    STATUS
+    STATUS,
+    DONE,
+    CLOSE
 } TaskType;
 
 typedef enum TaskStatus{
@@ -47,8 +49,6 @@ void addsched_task(Task_List** list, Task* task, char* sched_policy);
 void add_Task_fcfs(Task_List** list, Task* task);
 
 void add_Task_sjf(Task_List** list, Task* task);
-
-void add_task_head(Task_List** list, Task* task);
 
 void remove_head_Task(Task_List** list);
 

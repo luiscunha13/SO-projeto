@@ -7,16 +7,17 @@
 #include"task.h"
 #include<sys/wait.h>
 #include<sys/time.h>
+#include <pthread.h>
 
 
 #define CLIENT_SERVER "client_server"
 
 int task_id=1;
 //para o -u
-long execute_task_ONE(int id, char *command, struct timeval before, char *folder, char *outputs_file){
+int execute_task_ONE(Task *t, struct timeval before, char *folder, char *outputs_file){
 
     char *list_args[MAX];
-    argsToList(command,list_args);
+    argsToList(t->command,list_args);
     char outfilename[100];
     struct timeval after;
     pid_t pid = fork();
@@ -27,7 +28,7 @@ long execute_task_ONE(int id, char *command, struct timeval before, char *folder
             perror("Erro ao criar processo filho");
             return -1;
         case 0:
-            sprintf(outfilename, "%s/%d_output.txt",folder, id);
+            sprintf(outfilename, "%s/%d_output.txt",folder, t->id);
 
             int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
             if (fdout == -1) {
@@ -47,18 +48,19 @@ long execute_task_ONE(int id, char *command, struct timeval before, char *folder
         default :
             wait(&status);
             if(WIFEXITED(status))
-                printf("Task %d finished \n", id);
+                printf("Task %d finished \n", t->id);
             else
-                printf("Task %d did not finish correctly", id);
+                printf("Task %d did not finish correctly", t->id);
             break;
     }
 
     gettimeofday(&after,NULL);
 
     long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
+    t->real_time = ms;
 
-    char lines[50];
-    sprintf(lines,"%d %s %ld ms\n", id,command,ms);
+    char lines[350];
+    sprintf(lines,"%d %s %ld ms\n", t->id,t->command,ms);
 
     int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd == -1) {
@@ -75,7 +77,16 @@ long execute_task_ONE(int id, char *command, struct timeval before, char *folder
 
     close(fd);
 
-    return ms;
+    t->type = DONE;
+
+    int client_server_read = open(CLIENT_SERVER, O_WRONLY);
+    if (client_server_read == -1) {
+        perror("SERVER: Dind't open client-server fifo to read\n");
+        return -1;
+    }
+    write(client_server_read,t,sizeof(struct Task));
+
+    return 0;
 }
 
 void exec_command(char* command){
@@ -84,14 +95,14 @@ void exec_command(char* command){
     execvp(exec_args[0], exec_args);
 }
 //para o -p
-long execute_task_PIPELINE(int id, char *command, struct timeval before, char *folder, char *outputs_file){
+int execute_task_PIPELINE(Task *t, struct timeval before, char *folder, char *outputs_file){
     char *tasks[MAX];
-    int num_tasks = commandsToList(command,tasks);
+    int num_tasks = commandsToList(t->command,tasks);
 
     char outfilename[100];
     struct timeval after;
 
-    sprintf(outfilename, "%s/%d_output.txt",folder, id);
+    sprintf(outfilename, "%s/%d_output.txt",folder, t->id);
 
     int fdout = open(outfilename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fdout == -1) {
@@ -176,16 +187,16 @@ long execute_task_PIPELINE(int id, char *command, struct timeval before, char *f
             continue;
         else{
             aux=1;
-            printf("Task %d did not finish correctly", id);
+            printf("Task %d did not finish correctly", t->id);
             break;
         }
     }
-    if(aux==0) printf("Task %d finished \n", id);
+    if(aux==0) printf("Task %d finished \n", t->id);
 
     gettimeofday(&after,NULL);
 
     long ms = (after.tv_sec - before.tv_sec) * 1000 + (after.tv_usec - before.tv_usec) / 1000;
-
+    t->real_time = ms;
 
     int fd = open(outputs_file,O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (fd == -1) {
@@ -193,8 +204,8 @@ long execute_task_PIPELINE(int id, char *command, struct timeval before, char *f
         return -1;
     }
 
-    char lines[50];
-    sprintf(lines,"%d %s %ld\n", id,command,ms);
+    char lines[350];
+    sprintf(lines,"%d %s %ld\n", t->id,t->command,ms);
 
     ssize_t bytes_written = write(fd,lines,strlen(lines));
     if (bytes_written == -1) {
@@ -205,11 +216,20 @@ long execute_task_PIPELINE(int id, char *command, struct timeval before, char *f
 
     close(fdout);
    
+    //fazer a cena de mandar para o server
+    t->type = DONE;
 
-    return ms;
+    int client_server_read = open(CLIENT_SERVER, O_WRONLY);
+    if (client_server_read == -1) {
+        perror("SERVER: Dind't open client-server fifo to read\n");
+        return -1;
+    }
+    write(client_server_read,t,sizeof(struct Task));
+
+    return 0;
 }
 
-int status(Task_List* list_tasks, char *outputs_file, char *fifoc_name){
+int status(Task *t, Task_List* list_tasks, char *outputs_file, char *fifoc_name){
 
     int fdc = open(fifoc_name,O_WRONLY);
     if(fdc==-1){
@@ -277,6 +297,17 @@ int status(Task_List* list_tasks, char *outputs_file, char *fifoc_name){
     close(fd);
     close(fdc);
 
+    t->type = DONE;
+
+    int client_server_read = open(CLIENT_SERVER, O_WRONLY);
+    if (client_server_read == -1) {
+        perror("SERVER: Dind't open client-server fifo to read\n");
+        return -1;
+    }
+    write(client_server_read,t,sizeof(struct Task));
+
+    printf("Status finished\n");
+
     return 0;
 }
 
@@ -319,13 +350,11 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
     Task_List* list_tasks = NULL;
     struct timeval before;
 
-    
+    int maxtasks = atoi(argv[2]);
+    int current = 0;
 
     while(read(client_server_read,t, sizeof(struct Task))>0){
         if(t->type == EXECUTE){
-            //int numtasks = 0;
-            //int maxtasks = atoi(argv[2]);
-             // aqui é onde ele vai estar sempre a correr
             gettimeofday(&before,NULL);
             t->id=task_id;
             task_id++;
@@ -338,7 +367,6 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
             char fifoc_name[30];
             sprintf(fifoc_name,"server_client_%d",t->pid);
 
-
             int fdc = open(fifoc_name,O_WRONLY);
             if(fdc==-1){
                 perror("SERVER: Dind't open server-client fifo to write\n");
@@ -346,47 +374,55 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
             }
             write(fdc,&aux,strlen(aux));
             close(fdc);
-            
-            //while(1){
-               // if(numtasks<maxtasks){
-                    //provavelmente fazer aqui um ciclo para executar as tarefas da list_tasks
-                    //numtasks++;
+
+            int iter = maxtasks-current;
+
+            for(int i=0;i<iter;i++){
+                if(list_tasks!=NULL){
+                    t = get_task(list_tasks);
                     if(t->arg==ONE){ // -u
-                        long time = execute_task_ONE(t->id, t->command, before, argv[1],outputsfile);
-                        if(time != -1){
-                            t->real_time= time;
-                            t->status = FINISHED;
-                           // numtasks--;
-                        }
+                        execute_task_ONE(t, before, argv[1],outputsfile);
+
                     }
                     else if(t->arg==PIPELINE){ // -p
-                        long time = execute_task_PIPELINE(t->id,t->command,before, argv[1],outputsfile);
-                        if(time != -1){
-                            t->real_time= time;
-                            t->status = FINISHED;
-                           // numtasks--;
-                        }
+                        execute_task_PIPELINE(t,before, argv[1],outputsfile);
                     }
-                    
-
                     remove_head_Task(&list_tasks);
-                //}
-                //else{
-                //    wait(NULL);
-                //}
-            
+                    current++;
+                }
+                else break;
+            }
 
-            //}
         }
         else if(t->type == STATUS){
 
             char fifoc_name[30];
             sprintf(fifoc_name,"server_client_%d",t->pid);
 
-            status(list_tasks,outputsfile, fifoc_name);
+            status(t,list_tasks,outputsfile, fifoc_name);
 
-            printf("Status finished");
+        }
+        else if(t->type == CLOSE){
+            break;
+        }
+        else if(t->type == DONE){int iter = maxtasks-current;
+            current--;
 
+            for(int i=0;i<iter;i++){
+                if(list_tasks!=NULL){
+                    t = get_task(list_tasks);
+                    if(t->arg==ONE){ // -u
+                        execute_task_ONE(t, before, argv[1],outputsfile);
+
+                    }
+                    else if(t->arg==PIPELINE){ // -p
+                        execute_task_PIPELINE(t,before, argv[1],outputsfile);
+                    }
+                    remove_head_Task(&list_tasks);
+                    current++;
+                }
+                else break;
+            }
         }
     }
 
@@ -394,8 +430,15 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
     close(client_server_read);
     unlink(CLIENT_SERVER);
 
-
     return 0;
 
 
 }
+
+
+
+
+
+
+
+

@@ -4,6 +4,7 @@
 #include<sys/stat.h>
 #include<fcntl.h>
 #include<unistd.h>
+#include <pthread.h>
 #include"task.h"
 
 #define MAX 300
@@ -16,7 +17,6 @@ int main(int argc, char * argv[]){
     pid_t pid = getpid();
 
     if(argc == 5 && strcmp(argv[1],"execute")==0){
-        //parse_Task_Execute(t, pid,argv);
         t->type = EXECUTE;
         t->pid = pid;
         t->exp_time = atoi(argv[2]);
@@ -45,9 +45,11 @@ int main(int argc, char * argv[]){
 
     }
     else if (argc == 2 && strcmp(argv[1],"status")==0){
-        //parse_Task_Status(t, getpid());
         t->type = STATUS;
         t->pid = pid;
+    }
+    else if(argc == 2 && strcmp(argv[1],"close")==0){
+        t->type = CLOSE;
     }
     else{
         printf("CLIENT: invalid arguments\n");
@@ -76,29 +78,32 @@ int main(int argc, char * argv[]){
     write(cs_fifo,t,sizeof(struct Task));
     close(cs_fifo);
 
+    if(t->type != CLOSE){
+        int server_client = open(fifoc_name,O_RDONLY);
+        if(server_client == -1){
+            perror("CLIENT: Dind't open server-client fifo to read\n");
+            return -1;
+        }
 
-    int server_client = open(fifoc_name,O_RDONLY);
-    if(server_client == -1){
-        perror("CLIENT: Dind't open server-client fifo to read\n");
-        return -1;
+        char line[MAX+50];
+        ssize_t bytes_read;
+        while((bytes_read =read(server_client,&line,MAX+50))>0){
+            line[bytes_read] = '\0';
+            printf("%s",line);
+        }
+
+        if (bytes_read < 0) {
+            perror("CLIENT: Error reading from fifo server_client");
+            return -1;
+        }
+
+        close(server_client);
+
     }
 
-    char line[MAX+50];
-    ssize_t bytes_read;
-    while((bytes_read =read(server_client,&line,MAX+50))>0){
-        line[bytes_read] = '\0';
-        printf("%s",line);
-    }
-
-    if (bytes_read < 0) {
-        perror("CLIENT: Error reading from fifo server_client");
-        return -1;
-    }
 
 
 
-
-    close(server_client);
 
     unlink(fifoc_name);
 

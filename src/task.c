@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include<unistd.h>
+#include <pthread.h>
 #include"task.h"
 
 
@@ -53,6 +53,7 @@ void addsched_task(Task_List** list, Task* task, char* sched_policy){
 
 
 void add_Task_fcfs(Task_List** list, Task* task){ //mete a task no fim da list - first come, first served
+
     Task_List* new = malloc(sizeof (struct Task_List));
     if(new == NULL){
         perror("Erro ao alocar memória para a lista fcfs");
@@ -73,11 +74,11 @@ void add_Task_fcfs(Task_List** list, Task* task){ //mete a task no fim da list -
         current->next = new;
     }
 
-
 }
 
 
 void add_Task_sjf(Task_List** list, Task* task){ //mete a task por ordem crescente de tempo - shortest job first
+
     Task_List* new = malloc(sizeof (struct Task_List));
     if(new == NULL){
         perror("Erro ao alocar memória para a lista sjf");
@@ -98,24 +99,18 @@ void add_Task_sjf(Task_List** list, Task* task){ //mete a task por ordem crescen
         new->next = current->next;
         current->next = new;
     }
+
 }
 
-void add_task_head(Task_List** list, Task* task){
-    Task_List* new = malloc(sizeof (struct Task_List));
-    if( new == NULL){
-        perror("Erro ao alocar memória para a lista de add_task_head");
-    }
-    new->task = task;
-    new->next=*list;
-    *list=new;
-}
 
 void remove_head_Task(Task_List** list){ // quando a task é feita é removida da lista
+
     if(list!=NULL){
         Task_List* aux = *list;
         *list = (*list)->next;
         free(aux);
     }
+
 }
 
 Task* get_task(Task_List* t){
