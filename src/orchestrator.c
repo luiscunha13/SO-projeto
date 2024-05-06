@@ -113,7 +113,9 @@ int execute_task_PIPELINE(Task *t, struct timeval before, char *folder, char *ou
     int pipes[num_tasks][2];
     for(int i = 0; i< num_tasks; i++){
         if(i == 0){
-            pipe(pipes[i]);
+            if(pipe(pipes[i]) == -1){
+                perror("EXECUTE_PIPELINE : Failed to create pipe");
+            }
             switch(fork()){
                 case -1:
                     perror("EXECUTE_PIPELINE: Problem creating child process");
@@ -151,7 +153,9 @@ int execute_task_PIPELINE(Task *t, struct timeval before, char *folder, char *ou
             }
         }
         else{
-            pipe(pipes[i]);
+            if(pipe(pipes[i]) == -1){
+                perror("EXECUTE_PIPELINE : Failed to create pipe");
+            }
             switch(fork()){
                 case -1:
                     perror("EXECUTE_PIPELINE: Problem creating child process");
