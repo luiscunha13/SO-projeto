@@ -268,7 +268,7 @@ int status(Task_List* list_tasks, char *outputs_file, char *fifoc_name){
         while(current != NULL){
             t = current->task;
             if(t->status == SCHEDULED){
-                sprintf(line,"%d %s ola\n", t->id,t->command);
+                sprintf(line,"%d %s \n", t->id,t->command);
                 write(fdc,&line,strlen(line));
             }
             current = current->next;
@@ -321,6 +321,8 @@ int task_executer(Task_List *list, int max, int current, struct timeval before, 
                     perror("SERVER: error creating child process");
                     break;
                 case 0:
+                        t->status = EXECUTING;
+
 
                     if(t->arg==ONE){ // -u
                         execute_task_ONE(t, before, folder,outputsfile, pid);
