@@ -357,78 +357,54 @@ int main(int argc, char *argv[]){ //output_folder parallel_tasks sched_policy
     int maxtasks = atoi(argv[2]);
     int current = 0;
 
-    while(read(client_server_read,t, sizeof(struct Task))>0){
-        if(t->type == EXECUTE){
-            gettimeofday(&before,NULL);
-            t->id=task_id;
+    while (read(client_server_read, t, sizeof(struct Task)) > 0) {
+        if (t->type == EXECUTE) {
+            gettimeofday(&before, NULL);
+            t->id = task_id;
             task_id++;
             char aux[20];
             sprintf(aux, "Task id: %d\n", t->id);
-            t->status=EXECUTING;
+            t->status = EXECUTING;
             addsched_task(&list_tasks, t, argv[3]);
 
-            //Envio do id da tarefa para o cliente
             char fifoc_name[30];
-            sprintf(fifoc_name,"server_client_%d",t->pid);
+            sprintf(fifoc_name, "server_client_%d", t->pid);
 
-            int fdc = open(fifoc_name,O_WRONLY);
-            if(fdc==-1){
-                perror("SERVER: Dind't open server-client fifo to write\n");
+            int fdc = open(fifoc_name, O_WRONLY);
+            if (fdc == -1) {
+                perror("SERVER: Didn't open server-client fifo to write\n");
                 return -1;
             }
-            write(fdc,&aux,strlen(aux));
+            write(fdc, &aux, strlen(aux));
             close(fdc);
 
-            int iter = maxtasks-current;
-
-            for(int i=0;i<iter;i++){
-                if(list_tasks!=NULL){
-                    t = get_task(list_tasks);
-                    if(t->arg==ONE){ // -u
-                        execute_task_ONE(t, before, argv[1],outputsfile);
-
-                    }
-                    else if(t->arg==PIPELINE){ // -p
-                        execute_task_PIPELINE(t,before, argv[1],outputsfile);
-                    }
-                    remove_head_Task(&list_tasks);
-                    current++;
-                }
-                else break;
+            
+            if (current >= maxtasks) {
+                wait(NULL);
+                current--;
             }
 
-        }
-        else if(t->type == STATUS){
-
+            pid_t pid = fork();
+            if (pid == -1) {
+                perror("Failed to create child process");
+            } else if (pid == 0) {
+                if (t->arg == ONE) {
+                    execute_task_ONE(t, before, argv[1], outputsfile);
+                } else if (t->arg == PIPELINE) {
+                    execute_task_PIPELINE(t, before, argv[1], outputsfile);
+                }
+                exit(0);
+            }
+            current++;
+        } else if (t->type == STATUS) {
             char fifoc_name[30];
-            sprintf(fifoc_name,"server_client_%d",t->pid);
-
-            status(t,list_tasks,outputsfile, fifoc_name);
-
-        }
-        else if(t->type == CLOSE){
+            sprintf(fifoc_name, "server_client_%d", t->pid);
+            status(t, list_tasks, outputsfile, fifoc_name);
+        } else if (t->type == CLOSE) {
             break;
         }
-        else if(t->type == DONE){int iter = maxtasks-current;
-            current--;
+    }       
 
-            for(int i=0;i<iter;i++){
-                if(list_tasks!=NULL){
-                    t = get_task(list_tasks);
-                    if(t->arg==ONE){ // -u
-                        execute_task_ONE(t, before, argv[1],outputsfile);
-
-                    }
-                    else if(t->arg==PIPELINE){ // -p
-                        execute_task_PIPELINE(t,before, argv[1],outputsfile);
-                    }
-                    remove_head_Task(&list_tasks);
-                    current++;
-                }
-                else break;
-            }
-        }
-    }
 
     free(t);
     close(client_server_read);
