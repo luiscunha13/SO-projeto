@@ -12,8 +12,7 @@ typedef enum TaskType {
 
 typedef enum TaskStatus{
     SCHEDULED,
-    EXECUTING,
-    FINISHED
+    EXECUTING
 } TaskStatus;
 
 typedef enum TaskArg{
@@ -23,13 +22,12 @@ typedef enum TaskArg{
 
 
 typedef struct Task{
-    TaskType type; //tipo de task: Execute ou Status
-    pid_t pid; // Pid do fifo do cliente que manda o pedido
-    char command[MAX]; // comando a ser executado
-    int arg; // argumento: -u ou -p
-    int exp_time; //tempo esperado em ms (dado pelo utilizador)
-    long real_time; //tempo que realmente demorou a ser executado
-    TaskStatus status; //estado da task: Waiting, Executing, Finished
+    TaskType type;
+    pid_t pid;
+    char command[MAX];
+    TaskArg arg;
+    int exp_time;
+    TaskStatus status;
     int id;
 
 }Task;
@@ -53,5 +51,7 @@ void add_Task_sjf(Task_List** list, Task* task);
 void remove_head_Task(Task_List** list);
 
 Task* get_task(Task_List* t);
+
+Task_List* copyTaskList(Task_List* original);
 
 #endif

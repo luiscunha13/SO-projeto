@@ -4,7 +4,6 @@
 #include<sys/stat.h>
 #include<fcntl.h>
 #include<unistd.h>
-#include <pthread.h>
 #include"task.h"
 
 #define MAX 300
@@ -20,7 +19,6 @@ int main(int argc, char * argv[]){
         t->type = EXECUTE;
         t->pid = pid;
         t->exp_time = atoi(argv[2]);
-        t->real_time = -1;
         t->status = SCHEDULED;
         t->id = -1;
 

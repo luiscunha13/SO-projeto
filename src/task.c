@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include <pthread.h>
 #include"task.h"
 
 
@@ -12,11 +11,11 @@ void argsToList(char *command, char *list[]){
 
     while ((token = strsep(&copy, " ")) != NULL && i < MAX) {
         if(strlen(token) > 0){
-        list[i] = strdup(token);
-        if (list[i] == NULL) {
-            return;
-        }
-        i++;
+            list[i] = strdup(token);
+            if (list[i] == NULL) {
+                return;
+            }
+            i++;
         }
     }
     list[i]=NULL;
@@ -39,7 +38,7 @@ int commandsToList(char *command, char *list[]){
     free(copy);
 
     return i;
-    
+
 
 }
 
@@ -116,4 +115,24 @@ void remove_head_Task(Task_List** list){ // quando a task é feita é removida d
 Task* get_task(Task_List* t){
     return t->task;
 }
+
+Task_List* copyTaskList(Task_List* original) {
+    if (original == NULL)
+        return NULL;
+
+    Task_List* new_list = (Task_List*)malloc(sizeof(Task_List));
+    if (new_list == NULL) {
+        // Handle memory allocation failure
+        return NULL;
+    }
+
+    new_list->task = original->task;
+
+    // Recursive call to copy the rest of the list
+    new_list->next = copyTaskList(original->next);
+
+    return new_list;
+}
+
+
 
